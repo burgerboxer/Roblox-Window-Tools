@@ -2,6 +2,6 @@
 
 <h3 align="center">Project is open-sourced</h3>
 
-<h3 align="center">sourced is a bit unreadable</h3>
+<h3 align="center">source is a bit unreadable</h3>
 
 <h3 align="center">https://discord.gg/YreqZ7aYmg</h3>

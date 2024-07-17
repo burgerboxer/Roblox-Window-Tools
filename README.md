@@ -2,6 +2,12 @@
 
 <h3 align="center">Project is open-sourced</h3>
 
-<h3 align="center">source is a bit unreadable</h3>
+### How to use?
 
-<h3 align="center">https://discord.gg/YreqZ7aYmg</h3>
+#### Source
+1. Download & Install [Python](https://www.python.org/)
+2. Clone the repository using git: `git clone https://github.com/burgerboxer/Roblox-Window-Tools.git`
+3. Run req.bat
+4. Run RobloxWindowTools.pyw
+
+<h4 align="center">© 2024 burgerboxer</h4>

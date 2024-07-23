@@ -1,73 +1,83 @@
-import dearpygui.dearpygui as dpg, psutil, ctypes, os, win32gui, win32process, win32con, threading, time
+import dearpygui.dearpygui as dpg
+import psutil
+import ctypes
+import os
+import win32gui
+import win32process
+import win32con
+import threading
+import time
 
-def a(a):
-    dpg.add_text(a, parent="b")
-    dpg.set_y_scroll("b", dpg.get_y_scroll_max("b"))
+def log_message(message):
+    dpg.add_text(message, parent="log_window")
+    dpg.set_y_scroll("log_window", dpg.get_y_scroll_max("log_window"))
 
-def b():
-    for c in psutil.process_iter(['pid', 'name']):
-        if c.info['name'] == 'RobloxPlayerBeta.exe':
-            return c.info['pid']
+def find_roblox_process():
+    for proc in psutil.process_iter(['pid', 'name']):
+        if proc.info['name'] == 'RobloxPlayerBeta.exe':
+            return proc.info['pid']
     return None
 
-def d(e):
-    def f(g, h):
-        _, i = win32process.GetWindowThreadProcessId(g)
-        if i == e:
-            h.append(g)
+def get_window_handle_by_pid(pid):
+    def enum_windows_callback(hwnd, window_list):
+        _, proc_id = win32process.GetWindowThreadProcessId(hwnd)
+        if proc_id == pid:
+            window_list.append(hwnd)
         return True
-    j = []
-    win32gui.EnumWindows(f, j)
-    return j[0] if j else None
 
-def k():
-    l = b()
-    if l:
-        m = d(l)
-        if m:
-            n = dpg.get_value("o")
-            o = win32gui.GetWindowText(m)
-            if o != n:
-                ctypes.windll.user32.SetWindowTextW(m, n)
+    windows = []
+    win32gui.EnumWindows(enum_windows_callback, windows)
+    return windows[0] if windows else None
+
+def rename_window():
+    pid = find_roblox_process()
+    if pid:
+        hwnd = get_window_handle_by_pid(pid)
+        if hwnd:
+            new_title = dpg.get_value("window_title")
+            current_title = win32gui.GetWindowText(hwnd)
+            if current_title != new_title:
+                ctypes.windll.user32.SetWindowTextW(hwnd, new_title)
             else:
-                a("Name is already set you dumbass.")
+                log_message("Name is already set.")
 
-def p(q, r):
-    if os.path.exists(r):
-        s = win32gui.LoadImage(
-            None, r, win32con.IMAGE_ICON, 0, 0, win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTSIZE)
-        if s:
-            win32gui.SendMessage(q, win32con.WM_SETICON, win32con.ICON_SMALL, s)
-            win32gui.SendMessage(q, win32con.WM_SETICON, win32con.ICON_BIG, s)
+def set_window_icon(hwnd, icon_path):
+    if os.path.exists(icon_path):
+        icon_handle = win32gui.LoadImage(
+            None, icon_path, win32con.IMAGE_ICON, 0, 0, 
+            win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTSIZE)
+        if icon_handle:
+            win32gui.SendMessage(hwnd, win32con.WM_SETICON, win32con.ICON_SMALL, icon_handle)
+            win32gui.SendMessage(hwnd, win32con.WM_SETICON, win32con.ICON_BIG, icon_handle)
         else:
-            a(f"Failed to load icon from {r}.")
+            log_message(f"Failed to load icon from {icon_path}.")
     else:
-        a(f"Icon path {r} does not exist.")
+        log_message(f"Icon path {icon_path} does not exist.")
 
-def t():
-    u = b()
-    if u:
-        v = d(u)
-        if v:
-            w = dpg.get_value("o")
-            x = dpg.get_value("y")
-            y = win32gui.GetWindowText(v)
-            if w and y != w:
-                ctypes.windll.user32.SetWindowTextW(v, w)
-            if x:
-                p(v, x)
+def apply_changes():
+    pid = find_roblox_process()
+    if pid:
+        hwnd = get_window_handle_by_pid(pid)
+        if hwnd:
+            new_title = dpg.get_value("window_title")
+            icon_path = dpg.get_value("icon_path")
+            current_title = win32gui.GetWindowText(hwnd)
+            if new_title and current_title != new_title:
+                ctypes.windll.user32.SetWindowTextW(hwnd, new_title)
+            if icon_path:
+                set_window_icon(hwnd, icon_path)
 
-def z():
+def update_viewport_title():
     while True:
-        l = b()
-        if l:
-            aa = f"Roblox Window Tools | {l}"
+        pid = find_roblox_process()
+        if pid:
+            title = f"Roblox Window Tools | {pid}"
         else:
-            aa = "Roblox Window Tools"
-        dpg.set_viewport_title(aa)
+            title = "Roblox Window Tools"
+        dpg.set_viewport_title(title)
 
-        if dpg.get_value("ab"):
-            t()
+        if dpg.get_value("auto_apply"):
+            apply_changes()
 
         time.sleep(0.1)
 
@@ -75,21 +85,21 @@ dpg.create_context()
 
 with dpg.window(label="Roblox Window Tools", width=600, height=400):
     dpg.add_text("Rename Roblox Window")
-    dpg.add_input_text(hint="Window Title", tag="o")
-    dpg.add_button(label="Rename Window", callback=lambda: k())
+    dpg.add_input_text(hint="Window Title", tag="window_title")
+    dpg.add_button(label="Rename Window", callback=rename_window)
     
     dpg.add_text("Replace Window Icon")
-    dpg.add_input_text(hint="Icon File Path", tag="y")
-    dpg.add_button(label="Set Icon", callback=lambda: t())
+    dpg.add_input_text(hint="Icon File Path", tag="icon_path")
+    dpg.add_button(label="Set Icon", callback=apply_changes)
 
-    dpg.add_checkbox(label="Auto Apply", tag="ab")
-    dpg.add_child_window(label="Log", tag="b", width=580, height=200, border=True)
+    dpg.add_checkbox(label="Auto Apply", tag="auto_apply")
+    dpg.add_child_window(label="Log", tag="log_window", width=580, height=200, border=True)
 
 dpg.create_viewport(title="Roblox Window Tools | Initializing", width=615, height=439)
 dpg.setup_dearpygui()
 dpg.show_viewport()
 
-threading.Thread(target=z, daemon=True).start()
+threading.Thread(target=update_viewport_title, daemon=True).start()
 
 dpg.start_dearpygui()
 
